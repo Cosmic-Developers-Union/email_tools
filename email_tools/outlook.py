@@ -15,7 +15,6 @@ from curl_cffi import requests
 from loguru import logger
 
 
-# region 获取邮箱相关代码
 def decode_mime_words(s):
     decoded_fragments = email.header.decode_header(s)
     return ''.join([str(t[0], t[1] or 'utf-8') if isinstance(t[0], bytes) else t[0] for t in decoded_fragments])
@@ -152,4 +151,23 @@ class MSEmailClient:
         for i in get_folder_emails(self.mail, "Junk"):
             yield i
 
-# endregion
+
+class OutlookIMAP:
+    def __init__(self, email_address, access_token, client_id=None):
+        self.email_address = email_address
+        self.access_token = access_token
+        self.client = MSEmailClient(email_address, access_token, client_id)
+
+    def __enter__(self):
+        self.client.login()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            self.client.logout()
+        except RuntimeError as e:
+            logger.error(f"IMAP 退出失败: {e}")
+
+    def __iter__(self):
+        for email_data in self.client:
+            yield email_data
