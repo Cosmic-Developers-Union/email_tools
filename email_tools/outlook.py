@@ -4,15 +4,60 @@
 """Models Description
 
 """
+import dataclasses
 import datetime
 import email
 import email.header
 import imaplib
-
+from typing import Generator
 import dateutil.parser
 from bs4 import BeautifulSoup
 from curl_cffi import requests
 from loguru import logger
+
+
+@dataclasses.dataclass
+class EMail:
+    folder_name: str
+    email_counter: int
+    subject: str | None
+    date: datetime.datetime | str | None
+    body: str
+
+    def __getitem__(self, item):
+        if item == "subject":
+            return self.subject
+        elif item == "date":
+            return self.date
+        elif item == "body":
+            return self.body
+        elif item == "email_counter":
+            return self.email_counter
+        elif item == "folder_name":
+            return self.folder_name
+        else:
+            raise KeyError(f"Invalid key: {item}")
+
+    def _date(self) -> str | None:
+        if isinstance(self.date, datetime.datetime):
+            return self.date.strftime("%Y-%m-%d %H:%M:%S %z")
+        elif isinstance(self.date, str):
+            return dateutil.parser.parse(self.date).astimezone(datetime.timezone.utc).strftime(
+                "%Y-%m-%d %H:%M:%S %z"
+            )
+        elif self.date is None:
+            return None
+        else:
+            raise TypeError(f"Invalid date type: {type(self.date)}")
+
+    def __iter__(self):
+        yield from {
+            "subject": self.subject,
+            "date": self._date(),
+            "body": self.body,
+            "email_counter": self.email_counter,
+            "folder_name": self.folder_name
+        }.items()
 
 
 def decode_mime_words(s):
@@ -40,7 +85,7 @@ def remove_extra_blank_lines(text):
     return "\n".join(filter(lambda line: line.strip(), lines))
 
 
-def get_folder_emails(mail, folder_name):
+def get_folder_emails(mail, folder_name) -> Generator[EMail, None, None]:
     status, messages = mail.select(folder_name)
     if status != "OK":
         logger.error(f"选择 {folder_name} 失败: {status}")
@@ -90,13 +135,13 @@ def get_folder_emails(mail, folder_name):
                         body = strip_html(html_content)  # 去除 HTML 元素
 
                 body = remove_extra_blank_lines(body)
-                yield {
-                    "folder_name": folder_name,
-                    "email_counter": email_counter,
-                    "subject": subject,
-                    "date": date,
-                    "body": body
-                }
+                yield EMail(
+                    folder_name=folder_name,
+                    email_counter=email_counter,
+                    subject=subject,
+                    date=date,
+                    body=body
+                )
                 email_counter += 1
 
 
@@ -150,6 +195,9 @@ class MSEmailClient:
             yield i
         for i in get_folder_emails(self.mail, "Junk"):
             yield i
+
+
+gen_access_token = MSEmailClient.gen_access_token
 
 
 class OutlookIMAP:
