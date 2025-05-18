@@ -4,10 +4,12 @@
 """Models Description
 
 """
+import datetime
 import email
 import email.header
 import imaplib
 
+import dateutil.parser
 from bs4 import BeautifulSoup
 from curl_cffi import requests
 from loguru import logger
@@ -45,7 +47,8 @@ def get_folder_emails(mail, folder_name):
         logger.error(f"选择 {folder_name} 失败: {status}")
         return
 
-    status, message_ids = mail.search(None, 'ALL')
+    # status, message_ids = mail.search(None, 'ALL')
+    status, message_ids = mail.uid('search', None, 'ALL')
     if status != "OK":
         logger.error(f"邮件搜索失败: {status}")
         return
@@ -53,7 +56,8 @@ def get_folder_emails(mail, folder_name):
 
     # 获取每封邮件
     for message_id in message_ids[0].split():
-        status, msg_data = mail.fetch(message_id, '(RFC822)')
+        # status, msg_data = mail.fetch(message_id, '(RFC822)')
+        status, msg_data = mail.uid('fetch', message_id, '(RFC822)')
         if status != "OK":
             logger.error(f"获取邮件失败: {status}")
             continue
@@ -61,8 +65,9 @@ def get_folder_emails(mail, folder_name):
         for response_part in msg_data:
             if isinstance(response_part, tuple):
                 msg = email.message_from_bytes(response_part[1])
-                subject = decode_mime_words(msg["subject"])
+                subject = decode_mime_words(msg["subject"]) if msg["subject"] else "无主题"
                 date = msg["date"]
+                date = dateutil.parser.parse(date).astimezone(datetime.timezone.utc)
                 body = ""
                 if msg.is_multipart():
                     for part in msg.walk():
