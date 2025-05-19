@@ -4,13 +4,26 @@
 """Models Description
 
 """
-
-import unittest
 import datetime
+import os
+import unittest
+
+import dotenv
+from loguru import logger
+
+import email_tools_quick as etq
 from email_tools_quick.outlook import EMail
 
 
 class MyTestCase(unittest.TestCase):
+    def setUp(self):
+        dotenv.load_dotenv()
+        address, passwd, client_id, refresh_token = os.environ["TEST_EMAIL"].split("----")
+        self.address = address
+        self.passwd = passwd
+        self.client_id = client_id
+        self.refresh_token = refresh_token
+
     def test_something(self):
         email_ = EMail(
             folder_name="INBOX",
@@ -21,6 +34,13 @@ class MyTestCase(unittest.TestCase):
         )
         print(email_['subject'])
         print(dict(email_))
+
+    def test_least_5_minutes_ago(self):
+        access_token = etq.outlook.gen_access_token(self.refresh_token, self.client_id)
+        logger.info(f"{access_token=}")
+        with etq.outlook.OutlookIMAP(self.address, access_token, self.client_id) as outlook:
+            for em in outlook.latest_minutes(15):
+                print(em)
 
 
 if __name__ == '__main__':
