@@ -85,7 +85,7 @@ def remove_extra_blank_lines(text):
     return "\n".join(filter(lambda line: line.strip(), lines))
 
 
-def get_folder_emails(mail, folder_name) -> Generator[EMail, None, None]:
+def get_folder_emails(mail, folder_name, start: int = 0, end: int = -1) -> Generator[EMail, None, None]:
     status, messages = mail.select(folder_name)
     if status != "OK":
         logger.error(f"选择 {folder_name} 失败: {status}")
@@ -99,7 +99,7 @@ def get_folder_emails(mail, folder_name) -> Generator[EMail, None, None]:
     email_counter = 1
 
     # 获取每封邮件
-    for message_id in message_ids[0].split():
+    for message_id in message_ids[0].split()[start:end]:
         # status, msg_data = mail.fetch(message_id, '(RFC822)')
         status, msg_data = mail.uid('fetch', message_id, '(RFC822)')
         if status != "OK":
@@ -196,6 +196,14 @@ class MSEmailClient:
         for i in get_folder_emails(self.mail, "Junk"):
             yield i
 
+    def inbox(self, start: int = 0, end: int = -1) -> Generator[EMail, None, None]:
+        for i in get_folder_emails(self.mail, "INBOX", start, end):
+            yield i
+
+    def junk(self, start: int = 0, end: int = -1) -> Generator[EMail, None, None]:
+        for i in get_folder_emails(self.mail, "Junk", start, end):
+            yield i
+
 
 gen_access_token = MSEmailClient.gen_access_token
 
@@ -219,3 +227,18 @@ class OutlookIMAP:
     def __iter__(self):
         for email_data in self.client:
             yield email_data
+
+    def latest(self, count: int) -> Generator[EMail, None, None]:
+        for i in get_folder_emails(self.client.mail, "INBOX", -count, -1):
+            yield i
+        for i in get_folder_emails(self.client.mail, "Junk", -count, -1):
+            yield i
+
+    def latest_minutes(self, minutes: int) -> Generator[EMail, None, None]:
+        now = datetime.datetime.now(datetime.timezone.utc)
+        for i in get_folder_emails(self.client.mail, "INBOX"):
+            if (now - i.date).total_seconds() / 60 <= minutes:
+                yield i
+        for i in get_folder_emails(self.client.mail, "Junk"):
+            if (now - i.date).total_seconds() / 60 <= minutes:
+                yield i
