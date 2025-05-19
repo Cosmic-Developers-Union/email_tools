@@ -171,7 +171,7 @@ class MSEmailClient:
     def monkey(a):
         return a
 
-    def generate_auth_string(self, x):
+    def generate_auth_string(self, _):
         return f"user={self.address}\1auth=Bearer {self.access_token}\1\1"
 
     def __init__(self, address: str, access_token: str, client_id: str):

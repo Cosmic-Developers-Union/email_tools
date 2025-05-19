@@ -7,7 +7,7 @@
 
 import unittest
 import datetime
-from email_tools.outlook import EMail
+from email_tools_quick.outlook import EMail
 
 
 class MyTestCase(unittest.TestCase):
