@@ -1,6 +1,6 @@
 [project]
 name = "email-tools-quick"
-version = "0.1.1"
+version = "0.1.2"
 description = "A collection of tools for email processing"
 requires-python = ">=3.10"
 readme = "README.md"
@@ -8,6 +8,7 @@ dependencies = [
     "beautifulsoup4",
     "curl-cffi",
     "loguru",
+    "pysocks",
     "python-dateutil",
 ]
 
