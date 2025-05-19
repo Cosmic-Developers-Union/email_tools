@@ -9,3 +9,8 @@ dependencies = [
     "loguru",
     "python-dateutil",
 ]
+
+[dependency-groups]
+dev = [
+    "python-dotenv>=1.1.0",
+]
