@@ -6,6 +6,7 @@
 """
 import datetime
 import os
+import socket
 import unittest
 
 import dotenv
@@ -40,6 +41,23 @@ class MyTestCase(unittest.TestCase):
         logger.info(f"{access_token=}")
         with etq.outlook.OutlookIMAP(self.address, access_token, self.client_id) as outlook:
             for em in outlook.latest_minutes(15):
+                print(em)
+
+    def test_connect(self):
+        socket.create_connection = print
+        with self.assertRaises(AttributeError):
+            self.test_least_5_minutes_ago()
+
+    def test_proxy(self):
+        from email_tools_quick.mail import SocketParams
+        access_token = etq.outlook.gen_access_token(self.refresh_token, self.client_id)
+        logger.info(f"{access_token=}")
+        oi = etq.outlook.OutlookIMAP(self.address, access_token, self.client_id)
+        oi.socket_params = SocketParams.socks5h(os.environ['TEST_S5_HOST'], int(
+            os.environ['TEST_S5_PORT']
+        ))
+        with oi as outlook:
+            for em in outlook.latest(5):
                 print(em)
 
 
