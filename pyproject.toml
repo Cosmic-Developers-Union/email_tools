@@ -13,5 +13,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "pysocks>=1.7.1",
     "python-dotenv>=1.1.0",
 ]
