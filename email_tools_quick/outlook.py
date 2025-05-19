@@ -10,10 +10,14 @@ import email
 import email.header
 import imaplib
 from typing import Generator
+
 import dateutil.parser
 from bs4 import BeautifulSoup
 from curl_cffi import requests
 from loguru import logger
+
+from email_tools_quick.mail import IMAP4SSLClient
+from email_tools_quick.mail import SocketParams
 
 
 @dataclasses.dataclass
@@ -180,8 +184,8 @@ class MSEmailClient:
         self.client_id = client_id
         self.mail = None
 
-    def login(self):
-        self.mail = imaplib.IMAP4_SSL('outlook.office365.com')
+    def login(self, socket_params: SocketParams = None):
+        self.mail = IMAP4SSLClient('outlook.office365.com', socket_params=socket_params)
         self.mail.authenticate('XOAUTH2', self.generate_auth_string)  # noqa
 
     def logout(self):
@@ -209,13 +213,14 @@ gen_access_token = MSEmailClient.gen_access_token
 
 
 class OutlookIMAP:
-    def __init__(self, email_address, access_token, client_id=None):
+    def __init__(self, email_address, access_token, client_id=None, socket_params: SocketParams = None):
         self.email_address = email_address
         self.access_token = access_token
         self.client = MSEmailClient(email_address, access_token, client_id)
+        self.socket_params = socket_params
 
     def __enter__(self):
-        self.client.login()
+        self.client.login(self.socket_params)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
