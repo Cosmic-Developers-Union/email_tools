@@ -89,7 +89,7 @@ def remove_extra_blank_lines(text):
     return "\n".join(filter(lambda line: line.strip(), lines))
 
 
-def get_folder_emails(mail, folder_name, start: int = 0, end: int = -1) -> Generator[EMail, None, None]:
+def get_folder_emails(mail, folder_name, start: int = None, end: int = None) -> Generator[EMail, None, None]:
     status, messages = mail.select(folder_name)
     if status != "OK":
         logger.error(f"选择 {folder_name} 失败: {status}")
@@ -103,7 +103,18 @@ def get_folder_emails(mail, folder_name, start: int = 0, end: int = -1) -> Gener
     email_counter = 1
 
     # 获取每封邮件
-    for message_id in message_ids[0].split()[start:end]:
+    message_ids = message_ids[0].split()
+
+    if start is not None and end is not None:
+        ids = message_ids[start:end]
+    elif start is not None:
+        ids = message_ids[start:]
+    elif end is not None:
+        ids = message_ids[:end]
+    else:
+        ids = message_ids
+
+    for message_id in ids:
         # status, msg_data = mail.fetch(message_id, '(RFC822)')
         status, msg_data = mail.uid('fetch', message_id, '(RFC822)')
         if status != "OK":
@@ -200,11 +211,11 @@ class MSEmailClient:
         for i in get_folder_emails(self.mail, "Junk"):
             yield i
 
-    def inbox(self, start: int = 0, end: int = -1) -> Generator[EMail, None, None]:
+    def inbox(self, start: int = None, end: int = None) -> Generator[EMail, None, None]:
         for i in get_folder_emails(self.mail, "INBOX", start, end):
             yield i
 
-    def junk(self, start: int = 0, end: int = -1) -> Generator[EMail, None, None]:
+    def junk(self, start: int = None, end: int = None) -> Generator[EMail, None, None]:
         for i in get_folder_emails(self.mail, "Junk", start, end):
             yield i
 
@@ -234,9 +245,9 @@ class OutlookIMAP:
             yield email_data
 
     def latest(self, count: int) -> Generator[EMail, None, None]:
-        for i in get_folder_emails(self.client.mail, "INBOX", -count, -1):
+        for i in get_folder_emails(self.client.mail, "INBOX", -count, None):
             yield i
-        for i in get_folder_emails(self.client.mail, "Junk", -count, -1):
+        for i in get_folder_emails(self.client.mail, "Junk", -count, None):
             yield i
 
     def latest_minutes(self, minutes: int) -> Generator[EMail, None, None]:
