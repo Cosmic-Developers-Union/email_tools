@@ -57,8 +57,11 @@ class MyTestCase(unittest.TestCase):
             os.environ['TEST_S5_PORT']
         ))
         with oi as outlook:
-            for em in outlook.latest(5):
-                print(em)
+            while True:
+                for em in outlook.latest(5):
+                    print(em)
+                if input("...").strip() == "q":
+                    break
 
 
 if __name__ == '__main__':
