@@ -4,7 +4,8 @@
 """Models Description
 
 """
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
 
 from email_tools_quick.mail import SocketParams
 
@@ -14,4 +15,8 @@ class BaseEmailClient(ABC):
 
     @abstractmethod
     def login(self, socket_params: SocketParams = None):
+        pass
+
+    @abstractmethod
+    def latest(self, count: int = 3):
         pass

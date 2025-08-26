@@ -64,7 +64,6 @@ class IMAP4Client(IMAP4):
         super().__init__(host, port, timeout)  # 3.9
 
     def open(self, host="", port=143, timeout=None):
-        print(self.socket_params)
         return super().open(host, port, timeout)
 
     def _create_socket(self, timeout):
