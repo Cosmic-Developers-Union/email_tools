@@ -9,6 +9,7 @@ from abc import abstractmethod
 from typing import Generator
 
 from email_tools_quick.mail import SocketParams
+from email_tools_quick.data import EMail
 
 
 class BaseEmailClient(ABC):
@@ -35,9 +36,9 @@ class BaseEmailClient(ABC):
         return False
 
     @abstractmethod
-    def inbox(self, start: int = 0, end: int = -1) -> Generator:
+    def inbox(self, start: int = 0, end: int = -1) -> Generator[EMail, None, None]:
         pass
 
     @abstractmethod
-    def junk(self, start: int = 0, end: int = -1) -> Generator:
+    def junk(self, start: int = 0, end: int = -1) -> Generator[EMail, None, None]:
         pass
