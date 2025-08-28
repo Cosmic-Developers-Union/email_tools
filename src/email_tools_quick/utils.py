@@ -4,14 +4,16 @@
 """Models Description
 
 """
+import contextlib
 import datetime
 import email
 import email.header
 import email.message
+import email.parser
+import email.policy
 
 import dateutil.parser
 from bs4 import BeautifulSoup
-from loguru import logger
 
 from email_tools_quick.data import EMail
 
@@ -47,17 +49,33 @@ def parse_part(part: email.message.Message) -> str:
     content_disposition = str(part.get("Content-Disposition"))
 
     if "attachment" not in content_disposition:
-        logger.debug(f"{content_type=} | {content_disposition=}")
-        print()
+        # logger.debug(f"{content_type=} | {content_disposition=}")
         if content_type == "text/plain":
             contents.append(safe_decode(part.get_payload(decode=True)))
         elif content_type == "text/html":
             html_content = safe_decode(part.get_payload(decode=True))
             contents.append(strip_html(html_content))
         else:
-            logger.warning(f"Unsupported content type: {content_type}")
+            pass
+            # logger.warning(f"Unsupported content type: {content_type}")
     else:
-        logger.warning(f"attachment found: {content_disposition}")
+        pass
+        # logger.warning(f"attachment found: {content_disposition}")
+    return "\n".join(contents)
+
+
+def parse_html(raw: bytes):
+    msg = email.message_from_bytes(raw)
+    contents = []
+    if msg.is_multipart():
+        for part in msg.walk():
+            content_type = part.get_content_type()
+            content_disposition = str(part.get("Content-Disposition"))
+            if content_type == "text/html" and "attachment" not in content_disposition:
+                contents.append(part.get_content())
+    else:
+        if msg.get_content_type() == "text/html":
+            contents.append(msg.get_content())
     return "\n".join(contents)
 
 
@@ -76,9 +94,13 @@ def parse_msg(msg_data):
     else:
         body.append(parse_part(msg))
     body = "\n".join(body)
+    html = body
+    with contextlib.suppress(Exception):
+        html = parse_html(raw_email) or body
     return EMail(
-        subject=msg["subject"],
+        subject=msg["subject"].strip(),
         date=dateutil.parser.parse(msg["date"]).astimezone(datetime.timezone.utc),
         body=body,
+        html=html,
         sender=msg["from"],
     )
