@@ -14,7 +14,7 @@ from loguru import logger
 from email_tools_quick.data import EMail
 from email_tools_quick.data import MailBox
 from email_tools_quick.data import MailBoxMap
-from email_tools_quick.error import FetchMailError
+from email_tools_quick.error import FetchEmailError
 from email_tools_quick.error import NoSuchMailBoxError
 from email_tools_quick.mail import IMAP4Client
 from email_tools_quick.mail import IMAP4SSLClient
@@ -95,7 +95,7 @@ class BaseMixin:
         logger.info(f"select {folder}")
         status, msg = self.client.select(folder, readonly=True)
         if status != "OK":
-            raise NoSuchMailBoxError(f"选择邮箱失败: {status}, {msg}")
+            raise FetchEmailError(f"选择邮箱失败({status},{msg})")
 
     def search(self, *criteria):
         status, messages = self.client.uid('search', None, *criteria)
@@ -110,7 +110,7 @@ class BaseMixin:
     def fetch(self, mid: bytes):
         status, msg_data = self.client.uid('fetch', mid, '(RFC822)')
         if status != "OK":
-            raise FetchMailError(f"获取邮件失败: {status}")
+            raise FetchEmailError(f"获取邮件失败({status})")
         return parse_msg(msg_data)
 
     def _query(self, folder: str, x='ALL'):
@@ -118,7 +118,7 @@ class BaseMixin:
         if status != 'OK':
             message = message[0]
             if message == b"No such mailbox":
-                raise NoSuchMailBoxError(f"邮箱 {folder} 不存在或无法访问。请检查邮箱名称是否正确。")
+                raise FetchEmailError(f"邮箱不存在或无法访问,请检查邮箱名称是否正确({folder}))")
             logger.warning(message)
             return []
         status, messages = self.client.uid('search', None, x)

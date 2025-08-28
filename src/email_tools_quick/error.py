@@ -7,40 +7,25 @@
 
 
 class BaseEmailError(Exception):
-    pass
+    def __init__(self, msg: str, e: Exception = None):
+        super().__init__(f"{msg}: {e}")
 
 
-class EmailLogoutError(Exception):
-    """Exception raised when logout from email server fails."""
+class LoginEmailError(BaseEmailError):
+    """
+    Exception raised for errors in the login process.
+    """
 
-    def __init__(self, message: str = "Failed to logout from the email server.", e=None):
-        self.message = f"{message}({e})"
-        super().__init__(self.message)
+
+class FetchEmailError(BaseEmailError):
+    """
+    Exception raised for errors in fetching emails.
+    """
 
 
 class NoSuchMailBoxError(Exception):
     """Exception raised when the specified mailbox does not exist."""
 
     def __init__(self, message: str = "Mailbox does not exist."):
-        self.message = message
-        super().__init__(self.message)
-
-
-class FetchMailError(BaseEmailError):
-    pass
-
-
-class BadEmailError(Exception):
-    """Exception raised for errors in the email format."""
-
-    def __init__(self, message: str = "Invalid email format."):
-        self.message = message
-        super().__init__(self.message)
-
-
-class EmailConnectionError(Exception):
-    """Exception raised for errors in the email connection."""
-
-    def __init__(self, message: str = "Failed to connect to the email server."):
         self.message = message
         super().__init__(self.message)

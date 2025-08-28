@@ -17,6 +17,7 @@ class EMail:
     subject: str | None
     date: datetime.datetime | str | None
     body: str
+    html: str | None = None
     sender: str | None = None
     folder_name: str = "INBOX"
     email_counter: int = 0
