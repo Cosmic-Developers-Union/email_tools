@@ -1,0 +1,174 @@
+# -*- coding: utf-8 -*-
+# Copyright (C) 2025 Cosmic-Developers-Union (CDU), All rights reserved.
+
+"""Models Description
+
+"""
+import datetime
+import re
+from typing import Generator
+
+from curl_cffi import requests
+from loguru import logger
+
+from email_tools_quick.data import EMail
+from email_tools_quick.data import MailBox
+from email_tools_quick.data import MailBoxMap
+from email_tools_quick.error import FetchMailError
+from email_tools_quick.error import NoSuchMailBoxError
+from email_tools_quick.mail import IMAP4Client
+from email_tools_quick.mail import IMAP4SSLClient
+from email_tools_quick.outlook import get_folder_emails
+from email_tools_quick.utils import parse_msg
+
+
+class MSMixin:
+    @staticmethod
+    def generate_access_token(refresh_token: str, client_id: str):
+        tenant_id = 'common'
+        # tenant_id = "consumers"
+        refresh_token_data = {
+            'grant_type': 'refresh_token',
+            'refresh_token': refresh_token,
+            'client_id': client_id,
+        }
+
+        token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+        response = requests.post(token_url, data=refresh_token_data)
+        print(response.text)
+        if response.status_code == 200:
+            new_access_token = response.json().get('access_token')
+            logger.info(f"获取 Access Token: {new_access_token}")
+            return new_access_token
+        else:
+            raise RuntimeError(f"获取 Access Token 失败: {response.status_code} - {response.status_code}")
+
+
+class BaseMixin:
+    client: IMAP4Client | IMAP4SSLClient
+
+    @staticmethod
+    def _get_host(qname: str) -> str:
+        from dns.resolver import resolve
+        from dns.exception import DNSException
+        try:
+            mx_records = resolve(qname, 'MX')
+            return str(mx_records[0].exchange).rstrip('.')
+        except DNSException as e:
+            raise ValueError(f"DNS resolution failed for {qname}: {e}")
+
+    @classmethod
+    def get_host(cls, email: str) -> str:
+        domain = email.split('@')[1]
+        return cls._get_host(domain)
+
+    def mailboxes(self):
+        mbox_map = MailBoxMap()
+        status, mailboxes = self.client.list(pattern="%")
+        if status == "OK":
+            for mbox in mailboxes:
+                mbox: bytes
+                try:
+                    mbox: str = mbox.decode(encoding="utf-8")
+                except UnicodeDecodeError:
+                    logger.warning("邮箱名称解码失败，尝试使用 IMAP UTF-7 解码。")
+                    continue
+                mbox_ = re.search(r"\((.*)\) \"(.+)\" \"?([^\"]*)", mbox)
+                flags = mbox_.group(1).strip(" ")
+                nane = mbox_.group(3)
+                for flag in ["\Sent", "\Trash", "\Junk", "\Drafts", "\Archive"]:
+                    if flag in flags:
+                        if flag == "\Sent":
+                            mbox_map.Sent = nane
+                        elif flag == "\Trash":
+                            mbox_map.Trash = nane
+                        elif flag == "\Junk":
+                            mbox_map.Junk = nane
+                        elif flag == "\Drafts":
+                            mbox_map.Drafts = nane
+                        elif flag == "\Archive":
+                            mbox_map.Archive = nane
+                        else:
+                            logger.warning("未知邮箱标志: {flag}")
+        return mbox_map
+
+    def select(self, folder: str):
+        logger.info(f"select {folder}")
+        status, msg = self.client.select(folder)
+        if status != "OK":
+            raise NoSuchMailBoxError(f"选择邮箱失败: {status}, {msg}")
+
+    def search(self, *criteria):
+        status, messages = self.client.uid('search', None, *criteria)
+        if status != 'OK':
+            return []
+        return messages[0].split()
+
+    def ids(self, mbox: str, *criteria) -> list[bytes]:
+        self.select(mbox)
+        return self.search(*criteria)
+
+    def fetch(self, mid: bytes):
+        status, msg_data = self.client.uid('fetch', mid, '(RFC822)')
+        if status != "OK":
+            raise FetchMailError(f"获取邮件失败: {status}")
+        return parse_msg(msg_data)
+
+    def _query(self, folder: str, x='ALL'):
+        status, message = self.client.select(folder)
+        if status != 'OK':
+            message = message[0]
+            if message == b"No such mailbox":
+                raise NoSuchMailBoxError(f"邮箱 {folder} 不存在或无法访问。请检查邮箱名称是否正确。")
+            logger.warning(message)
+            return []
+        status, messages = self.client.uid('search', None, x)
+        if status != 'OK':
+            print(message)
+            return []
+        return messages[0].split()
+
+    def mails(self, mbox: MailBox, *criteria) -> Generator[EMail, None, None]:
+        maps = self.mailboxes()
+        mbox_name = mbox.mailbox(maps)
+        self.select(mbox_name)
+        ids = self.search(*criteria)
+        for mid in ids:
+            yield self.fetch(mid)
+
+
+class EmailBoxMixin(BaseMixin):
+    client: IMAP4Client | IMAP4SSLClient
+
+    def __iter__(self) -> Generator[EMail, None, None]:
+        for email_data in self.inbox():
+            yield email_data
+        for email_data in self.junk():
+            yield email_data
+
+    def inbox(self, start: int = None, end: int = None) -> Generator[EMail, None, None]:
+        for i in get_folder_emails(self.client, "INBOX", start, end):
+            yield i
+
+    def junk(self, start: int = None, end: int = None) -> Generator[EMail, None, None]:
+        for i in get_folder_emails(self.client, "Junk", start, end):
+            yield i
+
+
+class EmailMixin(EmailBoxMixin):
+    client: IMAP4Client | IMAP4SSLClient
+
+    def latest(self, count: int) -> Generator[EMail, None, None]:
+        for i in get_folder_emails(self.client, "INBOX", -count, None):
+            yield i
+        for i in get_folder_emails(self.client, "Junk", -count, None):
+            yield i
+
+    def latest_minutes(self, minutes: int) -> Generator[EMail, None, None]:
+        now = datetime.datetime.now(datetime.timezone.utc)
+        for i in get_folder_emails(self.client, "INBOX"):
+            if (now - i.date).total_seconds() / 60 <= minutes:
+                yield i
+        for i in get_folder_emails(self.client, "Junk"):
+            if (now - i.date).total_seconds() / 60 <= minutes:
+                yield i
