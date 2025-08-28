@@ -9,15 +9,17 @@ import datetime
 import enum
 
 import dateutil.parser
+import dateutil.parser
 
 
 @dataclasses.dataclass
 class EMail:
-    folder_name: str
-    email_counter: int
     subject: str | None
     date: datetime.datetime | str | None
     body: str
+    sender: str | None = None
+    folder_name: str = "INBOX"
+    email_counter: int = 0
 
     def __getitem__(self, item):
         if item == "subject":
@@ -53,6 +55,17 @@ class EMail:
             "email_counter": self.email_counter,
             "folder_name": self.folder_name
         }.items()
+
+    def __str__(self) -> str:
+        return "\n".join([
+            "=" * 37,
+            f"Subject: {self.subject}",
+            f"Date: {self._date()}",
+            f"Sender: {self.sender if self.sender else 'Unknown'}",
+            "",
+            f"{self.body}",
+            "=" * 37,
+        ])
 
 
 @dataclasses.dataclass

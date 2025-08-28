@@ -4,70 +4,16 @@
 """Models Description
 
 """
-import dataclasses
 import datetime
 import email
 import email.header
-import textwrap
+import email.message
 
 import dateutil.parser
 from bs4 import BeautifulSoup
+from loguru import logger
 
-
-@dataclasses.dataclass
-class EMail:
-    subject: str | None
-    date: datetime.datetime | str | None
-    body: str
-    sender: str | None = None
-    folder_name: str = "INBOX"
-    email_counter: int = 0
-
-    def __getitem__(self, item):
-        if item == "subject":
-            return self.subject
-        elif item == "date":
-            return self.date
-        elif item == "body":
-            return self.body
-        elif item == "email_counter":
-            return self.email_counter
-        elif item == "folder_name":
-            return self.folder_name
-        else:
-            raise KeyError(f"Invalid key: {item}")
-
-    def _date(self) -> str | None:
-        if isinstance(self.date, datetime.datetime):
-            return self.date.strftime("%Y-%m-%d %H:%M:%S %z")
-        elif isinstance(self.date, str):
-            return dateutil.parser.parse(self.date).astimezone(datetime.timezone.utc).strftime(
-                "%Y-%m-%d %H:%M:%S %z"
-            )
-        elif self.date is None:
-            return None
-        else:
-            raise TypeError(f"Invalid date type: {type(self.date)}")
-
-    def __iter__(self):
-        yield from {
-            "subject": self.subject,
-            "date": self._date(),
-            "body": self.body,
-            "email_counter": self.email_counter,
-            "folder_name": self.folder_name
-        }.items()
-
-    def __str__(self) -> str:
-        return "\n".join([
-            "=" * 37,
-            f"Subject: {self.subject}",
-            f"Date: {self._date()}",
-            f"Sender: {self.sender if self.sender else 'Unknown'}",
-            "",
-            f"{self.body}",
-            "=" * 37,
-        ])
+from email_tools_quick.data import EMail
 
 
 def decode_mime_words(s):
@@ -94,9 +40,6 @@ def remove_extra_blank_lines(text):
     # 使用 filter 删除空行，保留非空行
     return "\n".join(filter(lambda line: line.strip(), lines))
 
-
-from loguru import logger
-import email.message
 
 def parse_part(part: email.message.Message) -> str:
     contents = []
