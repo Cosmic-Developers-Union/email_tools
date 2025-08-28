@@ -4,3 +4,6 @@
 """Models Description
 
 """
+from .data import EMail
+from .data import MailBox
+from .data import MailBoxMap

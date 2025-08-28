@@ -6,6 +6,7 @@
 """
 import dataclasses
 import datetime
+import enum
 
 import dateutil.parser
 
@@ -52,3 +53,58 @@ class EMail:
             "email_counter": self.email_counter,
             "folder_name": self.folder_name
         }.items()
+
+
+@dataclasses.dataclass
+class MailBoxMap:
+    INBOX: str = "INBOX"
+    Sent: str = "Sent"
+    Trash: str = "Trash"
+    Junk: str = "Junk"
+    Drafts: str = "Drafts"
+    Archive: str = "Archive"
+
+    @property
+    def send(self):
+        return "发件箱"
+
+    @property
+    def trash(self):
+        return "回收站"
+
+    @property
+    def junk(self):
+        return "垃圾箱"
+
+    @property
+    def drafts(self):
+        return "草稿箱"
+
+    @property
+    def archive(self):
+        return "归档箱"
+
+
+class MailBox(enum.Enum):
+    INBOX = "INBOX"
+    Sent = "Sent"
+    Trash = "Trash"
+    Junk = "Junk"
+    Drafts = "Drafts"
+    Archive = "Archive"
+
+    def mailbox(self, mailbox_map: MailBoxMap):
+        if self == MailBox.INBOX:
+            return mailbox_map.INBOX
+        elif self == MailBox.Sent:
+            return mailbox_map.Sent
+        elif self == MailBox.Trash:
+            return mailbox_map.Trash
+        elif self == MailBox.Junk:
+            return mailbox_map.Junk
+        elif self == MailBox.Drafts:
+            return mailbox_map.Drafts
+        elif self == MailBox.Archive:
+            return mailbox_map.Archive
+        else:
+            raise ValueError(f"Invalid mailbox: {self}")
