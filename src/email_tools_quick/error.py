@@ -10,6 +10,14 @@ class BaseEmailError(Exception):
     pass
 
 
+class EmailLogoutError(Exception):
+    """Exception raised when logout from email server fails."""
+
+    def __init__(self, message: str = "Failed to logout from the email server.", e=None):
+        self.message = f"{message}({e})"
+        super().__init__(self.message)
+
+
 class NoSuchMailBoxError(Exception):
     """Exception raised when the specified mailbox does not exist."""
 
