@@ -18,7 +18,6 @@ from email_tools_quick.error import FetchMailError
 from email_tools_quick.error import NoSuchMailBoxError
 from email_tools_quick.mail import IMAP4Client
 from email_tools_quick.mail import IMAP4SSLClient
-from email_tools_quick.outlook import get_folder_emails
 from email_tools_quick.utils import parse_msg
 
 
@@ -94,7 +93,7 @@ class BaseMixin:
 
     def select(self, folder: str):
         logger.info(f"select {folder}")
-        status, msg = self.client.select(folder)
+        status, msg = self.client.select(folder, readonly=True)
         if status != "OK":
             raise NoSuchMailBoxError(f"选择邮箱失败: {status}, {msg}")
 
@@ -128,11 +127,19 @@ class BaseMixin:
             return []
         return messages[0].split()
 
-    def mails(self, mbox: MailBox, *criteria) -> Generator[EMail, None, None]:
+    def mails(self, mbox: MailBox, *criteria, start=None, end=None, reverse=False) -> Generator[EMail, None, None]:
         maps = self.mailboxes()
         mbox_name = mbox.mailbox(maps)
         self.select(mbox_name)
         ids = self.search(*criteria)
+        if reverse:
+            ids = reversed(ids)
+        if start is not None and end is not None:
+            ids = ids[start:end]
+        elif start is not None:
+            ids = ids[start:]
+        elif end is not None:
+            ids = ids[:end]
         for mid in ids:
             yield self.fetch(mid)
 
@@ -147,28 +154,31 @@ class EmailBoxMixin(BaseMixin):
             yield email_data
 
     def inbox(self, start: int = None, end: int = None) -> Generator[EMail, None, None]:
-        for i in get_folder_emails(self.client, "INBOX", start, end):
-            yield i
+        for m in self.mails(MailBox.INBOX, "ALL", start=start, end=end):
+            yield m
 
     def junk(self, start: int = None, end: int = None) -> Generator[EMail, None, None]:
-        for i in get_folder_emails(self.client, "Junk", start, end):
-            yield i
+        for m in self.mails(MailBox.Junk, "ALL", start=start, end=end):
+            yield m
 
 
 class EmailMixin(EmailBoxMixin):
     client: IMAP4Client | IMAP4SSLClient
 
     def latest(self, count: int) -> Generator[EMail, None, None]:
-        for i in get_folder_emails(self.client, "INBOX", -count, None):
+        for i in self.mails(MailBox.INBOX, "ALL", start=-count):
             yield i
-        for i in get_folder_emails(self.client, "Junk", -count, None):
+        for i in self.mails(MailBox.Junk, "ALL", start=-count):
             yield i
 
     def latest_minutes(self, minutes: int) -> Generator[EMail, None, None]:
         now = datetime.datetime.now(datetime.timezone.utc)
-        for i in get_folder_emails(self.client, "INBOX"):
+        since = now - datetime.timedelta(minutes=minutes)
+        since_date = since.strftime("%d-%b-%Y")
+        criteria = [f"(SINCE {since_date})"]
+        for i in self.mails(MailBox.INBOX, *criteria, reverse=True):
             if (now - i.date).total_seconds() / 60 <= minutes:
                 yield i
-        for i in get_folder_emails(self.client, "Junk"):
+        for i in self.mails(MailBox.Junk, *criteria, reverse=True):
             if (now - i.date).total_seconds() / 60 <= minutes:
                 yield i
