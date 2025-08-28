@@ -4,41 +4,40 @@
 """Models Description
 
 """
+import imaplib
 from abc import ABC
 from abc import abstractmethod
-from typing import Generator
 
+from email_tools_quick.mail import IMAP4Client
+from email_tools_quick.mail import IMAP4SSLClient
 from email_tools_quick.mail import SocketParams
-from email_tools_quick.data import EMail
 
 
 class BaseEmailClient(ABC):
-    """Abstract base class for email clients."""
+    client: IMAP4Client | IMAP4SSLClient
 
+    @classmethod
     @abstractmethod
-    def login(self, socket_params: SocketParams = None):
+    def login(
+            cls,
+            address: str,
+            password: str,
+            host: str = None,
+            port: int = None,
+            use_ssl: bool = True,
+            socket_params: SocketParams = None
+    ):
         pass
 
-    @abstractmethod
     def logout(self):
-        pass
-
-    @abstractmethod
-    def latest(self, count: int = 3):
-        pass
+        try:
+            self.client.logout()
+        except (imaplib.IMAP4.abort, imaplib.IMAP4.error):
+            pass
 
     def __enter__(self):
-        self.login()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.logout()
         return False
-
-    @abstractmethod
-    def inbox(self, start: int = 0, end: int = -1) -> Generator[EMail, None, None]:
-        pass
-
-    @abstractmethod
-    def junk(self, start: int = 0, end: int = -1) -> Generator[EMail, None, None]:
-        pass
