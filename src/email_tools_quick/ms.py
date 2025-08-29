@@ -38,6 +38,6 @@ class MSClient(CommonClient, MSMixin):
         host = host or cls.HOST
         port = port or cls.PORT
         client = IMAP4SSLClient(host, port, socket_params=socket_params)
-        authobject = cls.generate_auth_string(address, access_token)
+        authobject = cls.generate_auth_string(address, access_token["access_token"])
         client.authenticate('XOAUTH2', authobject)  # noqa
         return cls(client)

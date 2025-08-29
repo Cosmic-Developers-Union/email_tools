@@ -7,9 +7,28 @@
 import dataclasses
 import datetime
 import enum
+from typing import TypedDict
 
 import dateutil.parser
 import dateutil.parser
+
+
+class MSAccessToken(TypedDict):
+    token_type: str
+    scope: str
+    expires_in: int
+    ext_expires_in: int
+    access_token: str
+    refresh_token: str
+
+
+class MSAccessTokenError(TypedDict):
+    error: str
+    error_description: str
+    error_codes: list[int]
+    timestamp: str
+    trace_id: str
+    correlation_id: str
 
 
 @dataclasses.dataclass
@@ -50,11 +69,11 @@ class EMail:
 
     def __iter__(self):
         yield from {
-            "subject": self.subject,
-            "date": self._date(),
-            "body": self.body,
+            "subject"      : self.subject,
+            "date"         : self._date(),
+            "body"         : self.body,
             "email_counter": self.email_counter,
-            "folder_name": self.folder_name
+            "folder_name"  : self.folder_name
         }.items()
 
     def __str__(self) -> str:
