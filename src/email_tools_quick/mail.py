@@ -45,13 +45,34 @@ class SocketParams:
             proxy_rdns=rdns,
         )
 
+    @classmethod
+    def from_socks5h(cls, socks5h: str):
+        if not socks5h.startswith("socks5h://"):
+            raise ValueError("socks5h must start with socks5h://")
+        socks5h = socks5h[len("socks5h://"):]
+        if "@" in socks5h:
+            userinfo, hostinfo = socks5h.split("@", 1)
+            if ":" in userinfo:
+                username, password = userinfo.split(":", 1)
+            else:
+                username, password = userinfo, None
+        else:
+            hostinfo = socks5h
+            username, password = None, None
+        if ":" in hostinfo:
+            host, port = hostinfo.split(":", 1)
+            port = int(port)
+        else:
+            host, port = hostinfo, 1080
+        return cls.socks5h(host, port, username, password)
+
     def kwargs(self):
         return {
             'source_address': self.source_address,
-            'proxy_type': self.proxy_type,
-            'proxy_addr': self.proxy_addr,
-            'proxy_port': self.proxy_port,
-            'proxy_rdns': self.proxy_rdns,
+            'proxy_type'    : self.proxy_type,
+            'proxy_addr'    : self.proxy_addr,
+            'proxy_port'    : self.proxy_port,
+            'proxy_rdns'    : self.proxy_rdns,
             'proxy_username': self.proxy_username,
             'proxy_password': self.proxy_password,
             'socket_options': self.socket_options
