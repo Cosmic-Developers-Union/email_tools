@@ -32,9 +32,15 @@ class MSClient(CommonClient, MSMixin):
             socket_params: SocketParams = None,
             client_id: str = None,
             refresh_token: str = None,
+            access_token: str = None,
             **kwargs,
     ):
-        access_token = cls.generate_access_token(refresh_token, client_id)
+        if access_token is None:
+            if refresh_token is None or client_id is None:
+                raise ValueError("如果没有 access_token, 则必须提供 refresh_token 和 client_id")
+            access_token = cls.generate_auth_string(refresh_token, client_id)
+        else:
+            access_token = {"access_token": access_token}
         host = host or cls.HOST
         port = port or cls.PORT
         client = IMAP4SSLClient(host, port, socket_params=socket_params)
