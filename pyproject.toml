@@ -1,6 +1,6 @@
 [project]
 name = "email-tools-quick"
-version = "0.1.3"
+version = "1.0.0"
 description = "A collection of tools for email processing"
 requires-python = ">=3.10"
 readme = "README.md"

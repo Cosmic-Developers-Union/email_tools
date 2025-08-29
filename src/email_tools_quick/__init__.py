@@ -18,6 +18,8 @@ from .mail import IMAP4_SSL_PORT
 from .mail import SocketParams
 from .ms import MSClient
 
+__version__ = '1.0.0'
+
 __all__ = [
     "CommonClient",
     "MSClient",
