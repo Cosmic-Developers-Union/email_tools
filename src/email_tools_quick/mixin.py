@@ -7,6 +7,7 @@
 import datetime
 import re
 from typing import Generator
+from typing import Literal
 
 from curl_cffi import requests
 from loguru import logger
@@ -15,32 +16,39 @@ from email_tools_quick.data import EMail
 from email_tools_quick.data import MailBox
 from email_tools_quick.data import MailBoxMap
 from email_tools_quick.error import FetchEmailError
-from email_tools_quick.error import NoSuchMailBoxError
+from email_tools_quick.error import LoginEmailError
 from email_tools_quick.mail import IMAP4Client
 from email_tools_quick.mail import IMAP4SSLClient
 from email_tools_quick.utils import parse_msg
 
+TenantID = Literal['common', 'organizations', 'consumers']
+
 
 class MSMixin:
     @staticmethod
-    def generate_access_token(refresh_token: str, client_id: str):
-        tenant_id = 'common'
-        # tenant_id = "consumers"
+    def generate_access_token(
+            refresh_token: str,
+            client_id: str,
+            tenant_id: TenantID = 'common',
+            **kwargs
+    ) -> str:
         refresh_token_data = {
             'grant_type': 'refresh_token',
             'refresh_token': refresh_token,
             'client_id': client_id,
+            **kwargs,
         }
-
         token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
-        response = requests.post(token_url, data=refresh_token_data)
-        print(response.text)
+        try:
+            response = requests.post(token_url, data=refresh_token_data)
+        except Exception as e:
+            raise LoginEmailError("获取 Access Token 失败: 网络请求异常") from e
+        logger.info(response.text)
         if response.status_code == 200:
             new_access_token = response.json().get('access_token')
-            logger.info(f"获取 Access Token: {new_access_token}")
             return new_access_token
         else:
-            raise RuntimeError(f"获取 Access Token 失败: {response.status_code} - {response.status_code}")
+            raise LoginEmailError(f"获取 Access Token 失败: {response.status_code} - {response.status_code}")
 
 
 class BaseMixin:

@@ -28,7 +28,8 @@ class CommonClient(BaseEmailClient, EmailMixin):
             host: str = None,
             port: int = None,
             use_ssl: bool = True,
-            socket_params: SocketParams = None
+            socket_params: SocketParams = None,
+            **kwargs,
     ):
         host = host or cls.get_host(address)
         if use_ssl:
