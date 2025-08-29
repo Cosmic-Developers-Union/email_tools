@@ -95,20 +95,20 @@ class BaseMixin:
                 mbox_ = re.search(r"\((.*)\) \"(.+)\" \"?([^\"]*)", mbox)
                 flags = mbox_.group(1).strip(" ")
                 nane = mbox_.group(3)
-                for flag in ["\Sent", "\Trash", "\Junk", "\Drafts", "\Archive"]:
+                for flag in [r"\Sent", r"\Trash", r"\Junk", r"\Drafts", r"\Archive"]:
                     if flag in flags:
-                        if flag == "\Sent":
+                        if flag == r"\Sent":
                             mbox_map.Sent = nane
-                        elif flag == "\Trash":
+                        elif flag == r"\Trash":
                             mbox_map.Trash = nane
-                        elif flag == "\Junk":
+                        elif flag == r"\Junk":
                             mbox_map.Junk = nane
-                        elif flag == "\Drafts":
+                        elif flag == r"\Drafts":
                             mbox_map.Drafts = nane
-                        elif flag == "\Archive":
+                        elif flag == r"\Archive":
                             mbox_map.Archive = nane
                         else:
-                            logger.warning("未知邮箱标志: {flag}")
+                            logger.warning(f"未知邮箱标志: {flag}")
         return mbox_map
 
     def select(self, folder: str):
